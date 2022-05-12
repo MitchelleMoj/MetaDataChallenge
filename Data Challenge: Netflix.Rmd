@@ -1,0 +1,259 @@
+---
+title: 'Data Challenge: Netflix'
+author: "Mitchelle Mojekwu"
+date: "5/7/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+library(broom)
+library(knitr)
+library(tidyverse)
+library(ggfortify)
+library(readr)
+library(stringi)
+# add any other packages if needed
+```
+
+## EDA
+```{r}
+#read csv
+netflix <- read_csv("netflix_titles.csv")
+
+#year added to netflix column added (ranges from 2014-2021)
+netflix <- netflix %>% 
+  mutate(year_added = as.integer(stri_sub(date_added, -4,-1)),
+         release_year = as.integer(release_year),
+         country = factor(country))
+glimpse(netflix)
+  
+```
+
+```{r}
+#ggplot(data = netflix, aes(x = year_added, y = #duration))
+```
+
+
+```{r}
+#1 TV shows and movies overtime
+
+ggplot(data = netflix, mapping = aes(x = year_added, fill = type)) + geom_bar() + scale_fill_manual(values = c("grey", "blue")) + labs(x = "Year Added to Netflix", y = "Count", fill = "Type of Content")
+
+ggplot(netflix, aes(x = year_added, color = type)) + geom_density() + theme(axis.text = element_text(angle = 50, hjust = 1))
+
+```
+
+
+```{r}
+#2 countries overtime
+
+#top 10 countries based on frequency of content
+x <- list("United States", "India", "United Kingdom", "Japan", "South Korea", "Canada", "Spain", "France", "Mexico", "Egypt")
+top_10_c <- netflix %>% 
+  filter(country %in% x)
+
+#overtime trends of content by country
+ggplot(top_10_c, aes(x = year_added)) + geom_density() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1))
+
+#overtime trends of movie/tv shows by country
+ggplot(top_10_c, aes(x = year_added, color = type)) + geom_density() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1))
+
+```
+```{r}
+#3 genre overtime
+
+#top 10 genres
+netflix %>% 
+  filter(!is.na(listed_in)) %>% 
+  group_by(listed_in) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+x1 <- list("Dramas, International Movies","Documentaries","Stand-Up Comedy","Comedies, Dramas, International Movies", "Dramas, Independent Movies, International Movies", "Kids' TV", "Children & Family Movies", "Children & Family Movies, Comedies", "Documentaries, International Movies", "Dramas, International Movies, Romantic Movies")
+  
+top_10_g <-netflix %>% 
+  filter(listed_in %in% x1)
+
+ggplot(data = top_10_g, mapping = aes(x = year_added, color = listed_in)) +geom_density()
+
+
+ggplot(data = top_10_g, mapping = aes(x = year_added, color = listed_in)) +geom_density() + facet_wrap(.~listed_in)+ theme(axis.text = element_text(angle = 50, hjust = 1))
+
+
+
+```
+```{r}
+#4 duration overtime (shows then movies)
+
+#split data into shows and movies
+shows <- netflix %>% 
+  filter(type == "TV Show") %>% 
+  mutate(num_seasons = as.integer(substring(duration,-5,1)))
+  
+
+movies <- netflix %>% 
+  filter(type == "Movie") %>% 
+  mutate(num_mins = as.integer(stri_sub(duration,1, -5)))
+#glimpse(shows)
+#glimpse(movies)
+
+ggplot(data = shows,aes(x = year_added, y = num_seasons)) + geom_point() + geom_smooth() + labs(title = "Year Added vs Duration of Show", x = "Year Show Added to Netflix", y = "Duration of Show (Seasons)")
+
+ggplot(data = movies,aes(x = year_added, y = num_mins)) + geom_point() + geom_smooth() + labs(title = "Year Added vs Duration of Movie", x = "Year Show Added to Netflix", y = "Duration of Movie (Minutes)")
+
+```
+
+
+```{r}
+#5 directors overtime
+
+#top 10 directors in all content
+
+netflix %>% 
+  group_by(director) %>% 
+  filter(!is.na(director)) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+x2 <- list("Rajiv Chilaka", "Raúl Campos, Jan Suter", "Marcus Raboy", "Suhas Kadav", "Jay Karas", "Cathy Garcia-Molina", "Jay Chapman", "Martin Scorsese", "Youssef Chahine", "Steven Spielberg")
+
+top_10_d <-netflix %>% 
+  filter(director %in% x2)
+glimpse(top_10_d)
+
+ggplot(data = top_10_d, aes(x = year_added, y=director)) +geom_boxplot() + labs(title = "Year Added vs Director", x = "Year Added to Netflix", y = "Director")
+
+ggplot(data = top_10_d, mapping = aes(x = year_added, fill = director)) + geom_bar(position = "fill")+ labs(title = "Year Added vs Proportion of Director", x = "Year Added to Netflix", y = "Director")
+
+```
+
+```{r}
+#6 actors overtime
+#HAVE TO FIGURE OUT HOW TO SPLIT UP CAST BY ACTORS!!
+```
+
+```{r}
+#create model that shows which attributes of a show lead to more seasons!
+# figure out how to split up countries to use to create model that shows which aspects of a movie leads to appearances in more countries!!
+```
+
+
+```{r}
+#??2
+#both_country_count <- netflix %>% 
+#  filter(!is.na(country)) %>% 
+#  group_by(country) %>% 
+#  count() %>% 
+#  arrange(desc(n))
+#glimpse(both_country_count)
+
+
+
+
+#bar plot on the count of movies and shows within top 10 countries
+ggplot(top_10_c, aes(x = country, fill = type)) +
+    geom_bar() +
+    theme_classic()+ theme(axis.text = element_text(angle = 50, hjust = 1))
+
+#bar plot on the proportions of movies and shows within top 10 countries
+ggplot(top_10_c, aes(x = country, fill = type)) +
+    geom_bar(position = "fill") +
+    theme_classic()+ theme(axis.text = element_text(angle = 50, hjust = 1))
+
+#ggplot(data.frame(both_country_count), aes(x=country)) +
+  #geom_bar()
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+#split data into shows and movies
+shows <- netflix %>% 
+  filter(type == "TV Show") %>% 
+  mutate(num_seasons = as.integer(substring(duration,-5,1)))
+  
+
+movies <- netflix %>% 
+  filter(type == "Movie")
+glimpse(shows)
+glimpse(movies)
+
+#all data entries are <chr>"
+
+
+
+```
+
+```{r}
+
+```
+
+
+## Possible Useful Variables
+Shows:
+- country
+- date_added
+- release_year
+- duration (# of seasons)
+  *dependent (measure of success)
+- rating
+- listed_in (genre)
+  Most popular:
+  - Drama
+  - Documentary
+  - Comedy
+  
+  
+*most shows did not have a director listed
+
+Movies:
+- director
+- country
+  *dependent (measure of success)
+- date_added
+- release_year
+- rating 
+- duration (# of minutes)
+- listed_in (genre)
+  Most Popular:
+  - Comedy
+  - Animation
+  - Drama
+  
+https://www.whats-on-netflix.com/news/what-movie-tv-genres-perform-well-in-the-netflix-top-10s/
+
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
