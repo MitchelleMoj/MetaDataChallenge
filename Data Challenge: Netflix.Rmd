@@ -16,7 +16,7 @@ library(tidyverse)
 library(ggfortify)
 library(readr)
 library(stringi)
-# add any other packages if needed
+library(usethis)
 ```
 
 ## EDA
@@ -41,9 +41,9 @@ glimpse(netflix)
 ```{r}
 #1 TV shows and movies overtime
 
-ggplot(data = netflix, mapping = aes(x = year_added, fill = type)) + geom_bar() + scale_fill_manual(values = c("grey", "blue")) + labs(x = "Year Added to Netflix", y = "Count", fill = "Type of Content")
+ggplot(data = netflix, mapping = aes(x = year_added, fill = type)) + geom_bar() + scale_fill_manual(values = c("grey", "blue")) + labs(title = "Type of Content Added Overtime",x = "Year Added to Netflix", y = "Count", fill = "Type of Content")
 
-ggplot(netflix, aes(x = year_added, color = type)) + geom_density() + theme(axis.text = element_text(angle = 50, hjust = 1))
+#ggplot(netflix, aes(x = year_added, color = type)) + geom_density() + theme(axis.text = element_text(angle = 50, hjust = 1))
 
 ```
 
@@ -54,58 +54,97 @@ ggplot(netflix, aes(x = year_added, color = type)) + geom_density() + theme(axis
 #top 10 countries based on frequency of content
 x <- list("United States", "India", "United Kingdom", "Japan", "South Korea", "Canada", "Spain", "France", "Mexico", "Egypt")
 top_10_c <- netflix %>% 
-  filter(country %in% x)
+  filter(country %in% x,)
 
 #overtime trends of content by country
-ggplot(top_10_c, aes(x = year_added)) + geom_density() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1))
+ggplot(top_10_c, aes(x = year_added)) + geom_bar() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1)) + labs(title = "Distribution of Content Overtime", subtitle = "by Country", x = "Year Added", y = "Count")
 
 #overtime trends of movie/tv shows by country
-ggplot(top_10_c, aes(x = year_added, color = type)) + geom_density() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1))
+ggplot(top_10_c, aes(x = year_added, fill = type)) + geom_bar() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1)) + labs(title = "Distribution of Content Overtime", subtitle = "by Country", x = "Year Added", y = "Count")
 
 ```
 ```{r}
 #3 genre overtime
 
-#top 10 genres
-netflix %>% 
-  filter(!is.na(listed_in)) %>% 
-  group_by(listed_in) %>% 
-  count() %>% 
-  arrange(desc(n))
-
-x1 <- list("Dramas, International Movies","Documentaries","Stand-Up Comedy","Comedies, Dramas, International Movies", "Dramas, Independent Movies, International Movies", "Kids' TV", "Children & Family Movies", "Children & Family Movies, Comedies", "Documentaries, International Movies", "Dramas, International Movies, Romantic Movies")
-  
-top_10_g <-netflix %>% 
-  filter(listed_in %in% x1)
-
-ggplot(data = top_10_g, mapping = aes(x = year_added, color = listed_in)) +geom_density()
+netflix <- netflix %>% 
+  filter(!is.na(listed_in))
 
 
-ggplot(data = top_10_g, mapping = aes(x = year_added, color = listed_in)) +geom_density() + facet_wrap(.~listed_in)+ theme(axis.text = element_text(angle = 50, hjust = 1))
+genres<-netflix%>%
+  select(listed_in)%>%
+  separate(listed_in, into = c('genre1','genre2','genre3'),", ", convert = TRUE)
+
+genres<-genres%>%unlist()
+
+list_in<-tibble(
+  list_in=genres)
+
+genre_data <- list_in%>%
+  group_by(list_in)%>%
+  count()%>%
+  filter(!is.na(list_in) && n>=600)
 
 
+
+ggplot(genre_data, aes(n, reorder(list_in, fun=median, n)))+geom_histogram(stat = 'identity', show.legend = F)+
+  labs(
+    x='Count',
+    y='Genre of Content',
+    title='Distribution of Genre of Content') + coord_flip() + theme(axis.text = element_text(angle = 50, hjust = 1))
 
 ```
+
+
 ```{r}
 #4 duration overtime (shows then movies)
 
 #split data into shows and movies
 shows <- netflix %>% 
   filter(type == "TV Show") %>% 
-  mutate(num_seasons = as.integer(substring(duration,-5,1)))
-  
+  mutate(num_seasons = as.integer(substring(duration,-5,1)),
+         year_added = factor(year_added))
 
 movies <- netflix %>% 
-  filter(type == "Movie") %>% 
-  mutate(num_mins = as.integer(stri_sub(duration,1, -5)))
-#glimpse(shows)
-#glimpse(movies)
+  filter(type == "Movie",
+         !is.na(duration)) %>% 
+  mutate(num_mins = as.integer(stri_sub(duration,1, -5)),
+         year_added = factor(year_added))
 
-ggplot(data = shows,aes(x = year_added, y = num_seasons)) + geom_point() + geom_smooth() + labs(title = "Year Added vs Duration of Show", x = "Year Show Added to Netflix", y = "Duration of Show (Seasons)")
+movies <- movies %>% 
+  group_by(year_added) %>% 
+  mutate(mean_dur = mean(num_mins),
+         sd_dur = sd(num_mins))
 
-ggplot(data = movies,aes(x = year_added, y = num_mins)) + geom_point() + geom_smooth() + labs(title = "Year Added vs Duration of Movie", x = "Year Show Added to Netflix", y = "Duration of Movie (Minutes)")
+ggplot(data = shows, mapping = aes(x = num_seasons)) + geom_histogram() + labs(title = "Distribution of Duration for TV Shows", x = "Number of Seasons", y = "Count")
+
+ggplot(data = movies, mapping = aes(x = num_mins)) + geom_histogram() + labs(title =  "Distribution of Duration for Movies", x = "Duration of Movie (Minutes)", y = "Count")
+
+
+#because the distribution of shows is skewed we should use a box plot because it showcases the median duration and IQR 
+ggplot(data = shows,mapping = aes(x = year_added, y = num_seasons)) + geom_boxplot(color = "black", fill = "cornflowerblue") + labs(title = "Year Added vs Duration of Show", x = "Year Show Added to Netflix", y = "Duration of Show (Seasons)") + theme(axis.text = element_text(angle = 50, hjust = 1)) + scale_y_continuous(breaks = c(1,2,3,4,5,6,7,8,9,10))
+
+
+#because the distribution of movies is relatively normal we can use a histogram of the mean duration of the movies overtime
+#ggplot(data = movies,aes(x = year_added, y = num_mins, fill = year_added)) + geom_boxplot(color = "black", fill = "cornflowerblue") + labs(title = "Year Added vs Duration of Movie", x = "Year Show Added to Netflix", y = "Duration of Movie (Minutes)") + theme(axis.text = element_text(angle = 50, hjust = 1))
+
+
+#ggplot(data = movies, aes(x = year_added, y = mean_dur)) + geom_point(color= "steelblue") + labs(title = "Year Added vs Mean Duration of Movies", x = "Year Movie Added to Netflix", y = "Mean Duration of Movies (Minutes)")
+
+ggplot(movies, aes(x=year_added, y=mean_dur)) +
+  geom_bar(position=position_dodge(), stat="identity",
+           fill="steelblue") +
+  geom_errorbar(aes(ymin=mean_dur-sd_dur, ymax=mean_dur+sd_dur), width=.2) + labs(title = "Year Added vs Duration of Movie", x = "Year Movie Added to Netflix", y = "Duration of Movie (Minutes)")+ theme(axis.text = element_text(angle = 50, hjust = 1))
+
+
+
 
 ```
+
+
+```{r}
+
+```
+
 
 
 ```{r}
@@ -194,10 +233,6 @@ glimpse(movies)
 #all data entries are <chr>"
 
 
-
-```
-
-```{r}
 
 ```
 
