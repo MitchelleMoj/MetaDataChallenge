@@ -224,7 +224,6 @@ US_show_genre %>%
 
 ```{r duration}
 #4 duration overtime (shows then movies)
-
 movies <- movies %>% 
   group_by(year_added) %>% 
   mutate(mean_dur = mean(num_mins),
@@ -246,10 +245,38 @@ ggplot(movies, aes(x=year_added, y=mean_dur)) +
            fill="steelblue") +
   geom_errorbar(aes(ymin=mean_dur-sd_dur, ymax=mean_dur+sd_dur), width=.2) + labs(title = "Year Added vs Duration of Movie", x = "Year Movie Added to Netflix", y = "Duration of Movie (Minutes)")+ theme(axis.text = element_text(angle = 50, hjust = 1))
 
+```
+```{r US duration}
+
+US_movies <- movies %>% 
+  filter(country == "United States",
+         !is.na(duration))
+
+US_shows <- shows %>% 
+  filter(country == "United States",
+         !is.na(duration))
+
+US_movies <- US_movies %>% 
+  group_by(year_added) %>% 
+  mutate(mean_dur = mean(num_mins),
+         sd_dur = sd(num_mins))
+
+ggplot(data = US_shows, mapping = aes(x = num_seasons)) + geom_histogram() + labs(title = "Distribution of Duration for U.S. TV Shows", x = "Number of Seasons", y = "Count")
+
+ggplot(data = US_movies, mapping = aes(x = num_mins)) + geom_histogram() + labs(title =  "Distribution of Duration for U.S. Movies", x = "Duration of Movie (Minutes)", y = "Count")
+
+#because the distribution of shows is skewed we should use a box plot because it showcases the median duration and IQR 
+ggplot(data = US_shows,mapping = aes(x = year_added, y = num_seasons)) + geom_boxplot(color = "black", fill = "sandybrown") + labs(title = "Year Added vs Duration of U.S. Show", x = "Year Show Added to Netflix", y = "Duration of Show (Seasons)") + theme(axis.text = element_text(angle = 50, hjust = 1)) + scale_y_continuous(breaks = c(1,2,3,4,5,6,7,8,9,10))
 
 
+#because the distribution of movies is relatively normal we can use a histogram of the mean duration of the movies overtime
+ggplot(US_movies, aes(x=year_added, y=mean_dur)) +
+  geom_bar(position=position_dodge(), stat="identity",
+           fill="chocolate1") +
+  geom_errorbar(aes(ymin=mean_dur-sd_dur, ymax=mean_dur+sd_dur), width=.2) + labs(title = "Year Added vs Duration of U.S.Movie", x = "Year Movie Added to Netflix", y = "Duration of Movie (Minutes)")+ theme(axis.text = element_text(angle = 50, hjust = 1))
 
 ```
+
 
 
 ```{r release year}
@@ -363,66 +390,6 @@ ggplot(data = top_10_UScast, mapping = aes(x = year_added, fill = cast)) + geom_
 ```
 
 
-```{r}
-#create model that shows which attributes of a show lead to more seasons!
-# figure out how to split up countries to use to create model that shows which aspects of a movie leads to appearances in more countries!!
-```
-
-
-```{r}
-#??2
-#both_country_count <- netflix %>% 
-#  filter(!is.na(country)) %>% 
-#  group_by(country) %>% 
-#  count() %>% 
-#  arrange(desc(n))
-#glimpse(both_country_count)
-
-
-
-
-#bar plot on the count of movies and shows within top 10 countries
-ggplot(top_10_c, aes(x = country, fill = type)) +
-    geom_bar() +
-    theme_classic()+ theme(axis.text = element_text(angle = 50, hjust = 1))
-
-#bar plot on the proportions of movies and shows within top 10 countries
-ggplot(top_10_c, aes(x = country, fill = type)) +
-    geom_bar(position = "fill") +
-    theme_classic()+ theme(axis.text = element_text(angle = 50, hjust = 1))
-
-#ggplot(data.frame(both_country_count), aes(x=country)) +
-  #geom_bar()
-```
-
-
-
-
-
-
-
-
-
-
-
-```{r}
-
-#split data into shows and movies
-shows <- netflix %>% 
-  filter(type == "TV Show") %>% 
-  mutate(num_seasons = as.integer(substring(duration,-5,1)))
-  
-
-movies <- netflix %>% 
-  filter(type == "Movie")
-glimpse(shows)
-glimpse(movies)
-
-#all data entries are <chr>"
-
-
-
-```
 
 
 ## Possible Useful Variables
