@@ -20,7 +20,7 @@ library(usethis)
 ```
 
 ## EDA
-```{r}
+```{r data}
 #read csv
 netflix <- read_csv("netflix_titles.csv")
 
@@ -30,73 +30,7 @@ netflix <- netflix %>%
          release_year = as.integer(release_year),
          country = factor(country))
 glimpse(netflix)
-  
-```
 
-```{r}
-#ggplot(data = netflix, aes(x = year_added, y = #duration))
-```
-
-
-```{r}
-#1 TV shows and movies overtime
-
-ggplot(data = netflix, mapping = aes(x = year_added, fill = type)) + geom_bar() + scale_fill_manual(values = c("grey", "blue")) + labs(title = "Type of Content Added Overtime",x = "Year Added to Netflix", y = "Count", fill = "Type of Content")
-
-#ggplot(netflix, aes(x = year_added, color = type)) + geom_density() + theme(axis.text = element_text(angle = 50, hjust = 1))
-
-```
-
-
-```{r}
-#2 countries overtime
-
-#top 10 countries based on frequency of content
-x <- list("United States", "India", "United Kingdom", "Japan", "South Korea", "Canada", "Spain", "France", "Mexico", "Egypt")
-top_10_c <- netflix %>% 
-  filter(country %in% x,)
-
-#overtime trends of content by country
-ggplot(top_10_c, aes(x = year_added)) + geom_bar() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1)) + labs(title = "Distribution of Content Overtime", subtitle = "by Country", x = "Year Added", y = "Count")
-
-#overtime trends of movie/tv shows by country
-ggplot(top_10_c, aes(x = year_added, fill = type)) + geom_bar() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1)) + labs(title = "Distribution of Content Overtime", subtitle = "by Country", x = "Year Added", y = "Count")
-
-```
-```{r}
-#3 genre overtime
-
-netflix <- netflix %>% 
-  filter(!is.na(listed_in))
-
-
-genres<-netflix%>%
-  select(listed_in)%>%
-  separate(listed_in, into = c('genre1','genre2','genre3'),", ", convert = TRUE)
-
-genres<-genres%>%unlist()
-
-list_in<-tibble(
-  list_in=genres)
-
-genre_data <- list_in%>%
-  group_by(list_in)%>%
-  count()%>%
-  filter(!is.na(list_in) && n>=600)
-
-
-
-ggplot(genre_data, aes(n, reorder(list_in, fun=median, n)))+geom_histogram(stat = 'identity', show.legend = F)+
-  labs(
-    x='Count',
-    y='Genre of Content',
-    title='Distribution of Genre of Content') + coord_flip() + theme(axis.text = element_text(angle = 50, hjust = 1))
-
-```
-
-
-```{r}
-#4 duration overtime (shows then movies)
 
 #split data into shows and movies
 shows <- netflix %>% 
@@ -109,6 +43,187 @@ movies <- netflix %>%
          !is.na(duration)) %>% 
   mutate(num_mins = as.integer(stri_sub(duration,1, -5)),
          year_added = factor(year_added))
+  
+```
+
+```{r}
+#ggplot(data = netflix, aes(x = year_added, y = #duration))
+```
+
+
+```{r type}
+#1 TV shows and movies overtime
+
+ggplot(data = netflix, mapping = aes(x = year_added, fill = type)) + geom_bar() + scale_fill_manual(values = c("grey", "blue")) + labs(title = "Type of Content Added Overtime",x = "Year Added to Netflix", y = "Count", fill = "Type of Content")
+
+#ggplot(netflix, aes(x = year_added, color = type)) + geom_density() + theme(axis.text = element_text(angle = 50, hjust = 1))
+
+```
+
+
+
+```{r countries}
+#2 countries overtime
+
+#split countries (since some had multiple)
+country_eda <- netflix %>% 
+  filter(!is.na(country)) %>% 
+  separate_rows(country, sep = ',')
+country_eda$country <- trimws(country_eda$country)
+
+
+country_eda %>% 
+  group_by(country) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+#top 10 countries based on frequency of content
+x <- list("United States", "India", "United Kingdom","Canada", "France","Japan","Spain", "South Korea", "Germany", "Mexico")
+
+top_10_c <- netflix %>% 
+  filter(country %in% x,)
+
+#overtime trends of content by country
+ggplot(top_10_c, aes(x = year_added)) + geom_bar() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1)) + labs(title = "Distribution of Content Overtime", subtitle = "by Country", x = "Year Added", y = "Count")
+
+#overtime trends of movie/tv shows by country
+ggplot(top_10_c, aes(x = year_added, fill = type)) + geom_bar() + facet_wrap(.~country) + theme(axis.text = element_text(angle = 50, hjust = 1)) + labs(title = "Distribution of Content Overtime", subtitle = "by Country", x = "Year Added", y = "Count")
+
+```
+```{r genre}
+#3 genre overtime
+
+netflix <- netflix %>% 
+  filter(!is.na(listed_in))
+
+
+genres<-netflix%>%
+  select(listed_in)%>%
+  separate(listed_in, into = c('genre1','genre2','genre3'),", ", convert = TRUE)
+
+genres<-genres%>%unlist()
+
+
+list_in<-tibble(
+  list_in=genres)
+
+genre_data <- list_in%>%
+  group_by(list_in)%>%
+  count()%>%
+  filter(!is.na(list_in) && n>=600)
+
+
+ggplot(genre_data, aes(n, reorder(list_in, fun=median, n)))+geom_histogram(stat = 'identity', show.legend = F)+
+  labs(
+    x='Count',
+    y='Genre of Content',
+    title='Distribution of Genre of Content') + coord_flip() + theme(axis.text = element_text(angle = 50, hjust = 1))
+
+```
+
+```{r genre contd}
+genre_eda <- netflix %>%
+  filter(!is.na(listed_in)) %>% 
+  separate_rows(listed_in, sep = ",")
+genre_eda$listed_in <- trimws(genre_eda$listed_in)
+
+
+genre_eda %>% 
+  group_by(listed_in) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+#top 10 genres
+y <- list("International Movies", "Dramas", "Comedies", "International TV Shows", "Documentaries", "Action & Adventure", "TV Dramas", "Independent Movies", "Children & Family Movies", "Romantic Movies")
+
+genre_eda %>% 
+  filter(listed_in %in% y) %>% 
+  ggplot(aes(x=listed_in)) + geom_bar()+ theme(axis.text = element_text(angle = 50, hjust = 1))
+  
+genre_eda_movies <- movies %>% 
+  filter(!is.na(listed_in)) %>% 
+  separate_rows(listed_in, sep = ",")
+genre_eda_movies$listed_in <- trimws(genre_eda_movies$listed_in)
+
+genre_eda_movies %>% 
+  group_by(listed_in) %>% 
+  count() %>% 
+  arrange(desc(n))
+  
+
+#top 10 movie genres
+y1 <-list("International Movies", "Dramas", "Comedies", "Documentaries", "Action & Adventure", "Independent Movies", "Children & Family Movies", "Romantic Movies", "Thrillers", "Music & Musicals")
+
+genre_eda_movies %>% 
+  filter(listed_in %in% y1) %>% 
+  ggplot(aes(x=listed_in)) + geom_bar(fill = "steelblue1")+ theme(axis.text = element_text(angle = 50, hjust = 1))+ labs(title = "Distribution of Top 10 Movie Genres", x = "Genre of Movies", y = "Count")
+
+
+genre_eda_shows <- shows %>% 
+  filter(!is.na(listed_in)) %>% 
+  separate_rows(listed_in, sep = ",")
+genre_eda_shows$listed_in <- trimws(genre_eda_shows$listed_in)
+
+genre_eda_shows %>% 
+  group_by(listed_in) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+#top 10 show genres
+y2 <- list("International TV Shows", "TV Dramas", "TV Comedies", "Crime TV Shows", "Kids' TV", "Docuseries", "Romantic TV Shows", "Reality TV", "British TV Shows", "Anime Series")
+
+genre_eda_shows %>% 
+  filter(listed_in %in% y2) %>% 
+  ggplot(aes(x = listed_in)) +geom_bar(fill = "mediumpurple1") +theme(axis.text = element_text(angle = 50, hjust = 1))+ labs(title = "Distribution of Top 10 TV Shows Genres", x = "Genre of TV Shows", y = "Count")
+  
+```
+
+```{r genre US}
+US_genre <- country_eda %>% 
+  filter(country == "United States",
+        !is.na(listed_in)) %>% 
+  separate_rows(listed_in, sep = ",")
+US_genre$listed_in <- trimws(US_genre$listed_in)
+
+
+US_movie_genre <- US_genre %>% 
+  filter(type == "Movie")
+
+
+US_movie_genre %>% 
+  group_by(listed_in) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+#top 10 movie genres in the U.S.
+z <- list("Dramas", "Comedies", "Documentaries", "Action & Adventure", "Children & Family Movies", "Independent Movies", "Thrillers", "Romantic Movies", "Stand-Up Comedy", "Horror Movies")
+
+US_movie_genre %>% 
+  filter(listed_in %in% z) %>% 
+  ggplot(aes(x = listed_in)) +geom_bar(fill = "lightsalmon") +theme(axis.text = element_text(angle = 50, hjust = 1))+ labs(title = "Distribution of Top 10 Movie Genres in the U.S.", x = "Genre of Movie", y = "Count")
+
+US_show_genre <- US_genre %>% 
+  filter(type == "TV Show")
+
+US_show_genre %>% 
+  group_by(listed_in) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+#top 10 show genres in the U.S.
+z1<- list("TV Comedies", "TV Dramas", "Kids' TV", "Docuseries", "Crime TV Shows", "Reality TV", "TV Action & Adventure", "International TV Shows", "TV Sci-Fi & Fantasy", "TV Mysteries")
+
+US_show_genre %>% 
+  filter(listed_in %in% z1) %>% 
+  ggplot(aes(x = listed_in)) +geom_bar(fill = "lightblue2") +theme(axis.text = element_text(angle = 50, hjust = 1))+ labs(title = "Distribution of Top 10 Show Genres in the U.S.", x = "Genre of TV Show", y = "Count")
+
+
+```
+
+
+
+```{r duration}
+#4 duration overtime (shows then movies)
 
 movies <- movies %>% 
   group_by(year_added) %>% 
@@ -125,10 +240,6 @@ ggplot(data = shows,mapping = aes(x = year_added, y = num_seasons)) + geom_boxpl
 
 
 #because the distribution of movies is relatively normal we can use a histogram of the mean duration of the movies overtime
-#ggplot(data = movies,aes(x = year_added, y = num_mins, fill = year_added)) + geom_boxplot(color = "black", fill = "cornflowerblue") + labs(title = "Year Added vs Duration of Movie", x = "Year Show Added to Netflix", y = "Duration of Movie (Minutes)") + theme(axis.text = element_text(angle = 50, hjust = 1))
-
-
-#ggplot(data = movies, aes(x = year_added, y = mean_dur)) + geom_point(color= "steelblue") + labs(title = "Year Added vs Mean Duration of Movies", x = "Year Movie Added to Netflix", y = "Mean Duration of Movies (Minutes)")
 
 ggplot(movies, aes(x=year_added, y=mean_dur)) +
   geom_bar(position=position_dodge(), stat="identity",
@@ -141,30 +252,42 @@ ggplot(movies, aes(x=year_added, y=mean_dur)) +
 ```
 
 
-```{r}
+```{r release year}
+#5 release year
+releaseyr_eda <- netflix %>% 
+  filter(!is.na(release_year),
+         !is.na(year_added))
 
+ggplot(releaseyr_eda, mapping = aes(x = year_added, y = release_year)) + geom_count() +geom_smooth() + scale_y_continuous(breaks = c(1925,1950,1975,2000,2020)) + scale_x_continuous(breaks = c(2010,2013,2016,2019,2020,2021)) + labs(title = "Year Added vs Release Year", x = "Year Added", y = "Release Year")
+
+
+ggplot(releaseyr_eda, mapping = aes(x = year_added, y = release_year)) + geom_count() +geom_smooth() +xlim(2016,2021)+ylim(2016,2021)+ labs(title = "Year Added vs Release Year", x = "Year Added", y = "Release Year")
 ```
 
 
 
 ```{r}
-#5 directors overtime
+#6 directors overtime
 
 #top 10 directors in all content
 
-netflix %>% 
+
+director_eda <- netflix %>% 
+        filter(!is.na(director)) %>% 
+  separate_rows(director, sep = ",")
+director_eda$director <- trimws(director_eda$director)
+
+
+director_eda %>% 
   group_by(director) %>% 
-  filter(!is.na(director)) %>% 
   count() %>% 
   arrange(desc(n))
 
-x2 <- list("Rajiv Chilaka", "Raúl Campos, Jan Suter", "Marcus Raboy", "Suhas Kadav", "Jay Karas", "Cathy Garcia-Molina", "Jay Chapman", "Martin Scorsese", "Youssef Chahine", "Steven Spielberg")
+x2 <- list("Rajiv Chilaka", "Jan Suter","Raúl Campos", "Marcus Raboy", "Suhas Kadav", "Jay Karas", "Cathy Garcia-Molina", "Jay Chapman", "Martin Scorsese", "Youssef Chahine")
 
-top_10_d <-netflix %>% 
+top_10_d <-director_eda %>% 
   filter(director %in% x2)
-glimpse(top_10_d)
 
-ggplot(data = top_10_d, aes(x = year_added, y=director)) +geom_boxplot() + labs(title = "Year Added vs Director", x = "Year Added to Netflix", y = "Director")
 
 ggplot(data = top_10_d, mapping = aes(x = year_added, fill = director)) + geom_bar(position = "fill")+ labs(title = "Year Added vs Proportion of Director", x = "Year Added to Netflix", y = "Director")
 
